@@ -230,26 +230,27 @@ Since you don't have Jetson Xavier NX:
 
 ## 7. Implementation Roadmap
 
-### Phase 1: Data Preparation (Week 1)
-- [ ] Download NASA milling dataset
-- [ ] Explore and preprocess data
-- [ ] Extract relevant features (forces, wear, temperatures)
-- [ ] Create train/val/test splits
-- [ ] Normalize data and establish baselines
+### Phase 1: Data Preparation ✅ COMPLETE
+- [x] Download NASA milling dataset
+- [x] Explore and preprocess data
+- [x] Extract relevant features (forces, wear, temperatures)
+- [x] Create train/val/test splits (8730/1710/1606)
+- [x] Normalize inputs only, keep outputs in original scale
+- [x] Remove corrupted thermal displacement values
 
-### Phase 2: Dense PINN Implementation (Week 2)
-- [ ] Build baseline dense architecture in PyTorch/TensorFlow
-- [ ] Implement physics loss functions
-- [ ] Implement conservation law constraints
-- [ ] Train baseline model
-- [ ] Validate and record baseline metrics
+### Phase 2: Dense PINN Implementation ✅ COMPLETE
+- [x] Build baseline dense architecture in PyTorch (666k parameters)
+- [x] Implement weighted loss for output balancing (20x thermal)
+- [x] Train improved baseline model (R² = 0.812)
+- [x] Validate and record baseline metrics (Tool R²=0.74, Thermal R²=0.74)
+- [ ] Implement physics loss functions (deferred to Phase 3b)
 
-### Phase 3: Pruning & SPINN Development (Week 3)
+### Phase 3: Pruning & SPINN Development 🔄 IN PROGRESS
 - [ ] Implement magnitude-based pruning algorithm
-- [ ] Execute iterative pruning schedule
+- [ ] Execute iterative pruning schedule (20% → 20% → 15% → 15%)
 - [ ] Fine-tune at each pruning stage
 - [ ] Monitor accuracy degradation
-- [ ] Achieve 70% parameter reduction target
+- [ ] Achieve 70% parameter reduction target (666k → ~200k)
 
 ### Phase 4: Validation & Benchmarking (Week 4)
 - [ ] Run inference timing benchmarks on laptop
