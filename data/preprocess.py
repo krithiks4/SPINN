@@ -373,6 +373,14 @@ class MillingDataPreprocessor:
         if 'tool_wear' in df.columns:
             df = df[df['tool_wear'] >= 0]
         
+        # Cap thermal displacement at reasonable maximum (based on NASA data: max ~0.36 mm)
+        if 'thermal_displacement' in df.columns:
+            before = len(df)
+            df = df[df['thermal_displacement'] < 1.0]  # Remove corrupted values > 1mm
+            removed = before - len(df)
+            if removed > 0:
+                print(f"   Removed {removed} rows with corrupted thermal_displacement values")
+        
         print(f"✅ Clean data: {len(df)} rows remaining")
         
         return df.reset_index(drop=True)
