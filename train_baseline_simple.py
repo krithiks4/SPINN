@@ -80,7 +80,7 @@ def main():
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='min', factor=0.5, patience=15, verbose=True
+        optimizer, mode='min', factor=0.5, patience=15
     )
 
     # Training history
