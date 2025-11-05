@@ -73,13 +73,13 @@ def main():
     # Compute output scales for weighting
     print("Computing output scales for weighted loss...")
     train_std = y_train.std(dim=0)
-    print(f"   Tool wear std: {train_std[0]:.6f}")
-    print(f"   Thermal disp std: {train_std[1]:.6f}")
+    train_mean = y_train.mean(dim=0)
+    print(f"   Tool wear - mean: {train_mean[0]:.6f}, std: {train_std[0]:.6f}")
+    print(f"   Thermal disp - mean: {train_mean[1]:.6f}, std: {train_std[1]:.6f}")
     
-    # Weight inversely proportional to variance (emphasize thermal displacement more)
-    weights = 1.0 / (train_std ** 2)
-    weights = weights / weights.sum() * 2  # Normalize
-    weights = torch.tensor([1.0, 10.0]).to(device)  # Give thermal disp 10x weight
+    # Weight inversely proportional to squared std (emphasize thermal displacement MUCH more)
+    # Tool wear has ~3x larger std, so thermal needs ~9x weight, but we boost it to 20x
+    weights = torch.tensor([1.0, 20.0]).to(device)  # Give thermal disp 20x weight
     
     print(f"   Loss weights: tool_wear={weights[0]:.2f}, thermal_disp={weights[1]:.2f}\n")
 
@@ -95,18 +95,18 @@ def main():
     print("Initializing Dense PINN model...")
     model = DensePINN(
         input_dim=len(input_features),
-        hidden_dims=[512, 512, 256, 256],  # Wider for better capacity
+        hidden_dims=[512, 512, 512, 256],  # Even wider for thermal displacement
         output_dim=len(output_features)
     ).to(device)
 
     total_params = sum(p.numel() for p in model.parameters())
     print(f"Total parameters: {total_params:,}\n")
 
-    # Weighted loss and optimizer
+    # Weighted loss and optimizer with warmup
     criterion = WeightedMSELoss(weights)
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=0.002, weight_decay=1e-5)  # Higher LR, add regularization
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='min', factor=0.5, patience=20
+        optimizer, mode='min', factor=0.5, patience=25  # More patience
     )
 
     # Training history
