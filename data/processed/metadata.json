@@ -1,0 +1,40 @@
+{
+  "n_features": 20,
+  "feature_names": [
+    "experiment_id",
+    "case_index",
+    "time",
+    "tool_wear",
+    "depth_of_cut",
+    "feed_rate",
+    "force_ac",
+    "force_dc",
+    "vib_table",
+    "vib_spindle",
+    "force_x",
+    "force_y",
+    "force_z",
+    "spindle_speed",
+    "force_magnitude",
+    "mrr",
+    "cumulative_mrr",
+    "heat_generation",
+    "cumulative_heat",
+    "thermal_displacement"
+  ],
+  "train_samples": 8730,
+  "val_samples": 1710,
+  "test_samples": 2695,
+  "statistics": {
+    "tool_wear": {
+      "min": 0.0,
+      "max": 1.53,
+      "mean": 0.33876288659793813
+    },
+    "thermal_displacement": {
+      "min": 4.700684995142847e-05,
+      "max": 0.36622940422494227,
+      "mean": 0.10859118291301326
+    }
+  }
+}
