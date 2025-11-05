@@ -51,47 +51,73 @@ def compute_layer_importance(model):
                 importance_scores.append((name, param, importance))
     return importance_scores
 
-def apply_pruning(model, prune_ratio):
-    """Apply magnitude-based structured pruning"""
+def apply_pruning(model, prune_ratio, existing_masks=None):
+    """Apply magnitude-based structured pruning with cumulative masking"""
     print(f"\n🔪 Applying {prune_ratio*100:.0f}% pruning...")
     
-    # Get all weight parameters with their importance
+    # Get all weight parameters
     all_weights = []
     for name, param in model.named_parameters():
         if 'weight' in name and param.requires_grad:
             all_weights.append((name, param))
     
-    # Compute global threshold based on L1 magnitude
+    # Initialize masks if first stage
+    if existing_masks is None:
+        existing_masks = {}
+        for name, param in all_weights:
+            existing_masks[name] = torch.ones_like(param)
+    
+    # Compute global threshold based on CURRENTLY ACTIVE (non-zero) weights
     all_magnitudes = []
     for name, param in all_weights:
-        all_magnitudes.append(torch.abs(param).flatten())
+        # Only consider weights that haven't been pruned yet
+        active_weights = param[existing_masks[name] > 0]
+        if len(active_weights) > 0:
+            all_magnitudes.append(torch.abs(active_weights).flatten())
+    
+    if len(all_magnitudes) == 0:
+        print("   ⚠️ No weights left to prune!")
+        return 0.0, existing_masks
     
     all_magnitudes = torch.cat(all_magnitudes)
     threshold = torch.quantile(all_magnitudes, prune_ratio)
     
     print(f"   Pruning threshold: {threshold:.6f}")
     
-    # Apply mask to zero out small weights
-    pruned_params = 0
-    total_params = 0
+    # Update masks - prune additional weights below threshold
+    total_pruned_this_stage = 0
+    total_active_before = 0
+    
     for name, param in all_weights:
-        mask = torch.abs(param) > threshold
-        param.data *= mask.float()
+        # Count active weights before this stage
+        active_before = existing_masks[name].sum().item()
+        total_active_before += active_before
         
-        pruned = (~mask).sum().item()
-        total = param.numel()
-        pruned_params += pruned
-        total_params += total
+        # Create new mask: keep only weights above threshold AND previously active
+        new_mask = (torch.abs(param) > threshold).float() * existing_masks[name]
         
-        print(f"   {name}: pruned {pruned}/{total} ({pruned/total*100:.1f}%)")
+        # Update mask
+        existing_masks[name] = new_mask
+        
+        # Apply mask to weights
+        param.data *= new_mask
+        
+        # Count newly pruned weights
+        active_after = new_mask.sum().item()
+        pruned_this_stage = active_before - active_after
+        total_pruned_this_stage += pruned_this_stage
+        
+        print(f"   {name}: pruned {pruned_this_stage}/{int(active_before)} " 
+              f"({pruned_this_stage/active_before*100 if active_before > 0 else 0:.1f}%), "
+              f"remaining: {int(active_after)}/{param.numel()}")
     
-    actual_prune_ratio = pruned_params / total_params
-    print(f"   Total pruned: {pruned_params}/{total_params} ({actual_prune_ratio*100:.1f}%)")
+    actual_prune_ratio = total_pruned_this_stage / total_active_before if total_active_before > 0 else 0
+    print(f"   Total pruned this stage: {total_pruned_this_stage}/{int(total_active_before)} ({actual_prune_ratio*100:.1f}%)")
     
-    return actual_prune_ratio
+    return actual_prune_ratio, existing_masks
 
-def fine_tune(model, train_loader, val_loader, criterion, device, epochs=50, lr=0.0001):
-    """Fine-tune pruned model"""
+def fine_tune(model, train_loader, val_loader, criterion, device, epochs=50, lr=0.0001, masks=None):
+    """Fine-tune pruned model while enforcing masks"""
     print(f"\n🎯 Fine-tuning for {epochs} epochs...")
     
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
@@ -114,6 +140,14 @@ def fine_tune(model, train_loader, val_loader, criterion, device, epochs=50, lr=
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
+            
+            # Enforce masks - zero out pruned weights after optimizer step
+            if masks is not None:
+                with torch.no_grad():
+                    for name, param in model.named_parameters():
+                        if name in masks:
+                            param.data *= masks[name]
+            
             train_loss += loss.item()
         train_loss /= len(train_loader)
         
@@ -240,12 +274,13 @@ def main():
     print(f"Tool wear R² = {baseline_metrics['per_output']['tool_wear']['r2']:.4f}")
     print(f"Thermal disp R² = {baseline_metrics['per_output']['thermal_displacement']['r2']:.4f}")
     
-    # Iterative pruning schedule
+    # Iterative pruning schedule - targeting 70% cumulative reduction
+    # Cumulative: 30% → 51% → 65% → 72%
     pruning_schedule = [
-        (0.20, 30, 0.0005),  # Prune 20%, fine-tune 30 epochs, lr=0.0005
-        (0.20, 30, 0.0003),  # Prune 20%, fine-tune 30 epochs, lr=0.0003
-        (0.15, 40, 0.0002),  # Prune 15%, fine-tune 40 epochs, lr=0.0002
-        (0.15, 50, 0.0001),  # Prune 15%, fine-tune 50 epochs, lr=0.0001
+        (0.30, 40, 0.0005),  # Prune 30%, fine-tune 40 epochs, lr=0.0005
+        (0.30, 40, 0.0003),  # Prune 30%, fine-tune 40 epochs, lr=0.0003
+        (0.20, 50, 0.0002),  # Prune 20%, fine-tune 50 epochs, lr=0.0002
+        (0.20, 60, 0.0001),  # Prune 20%, fine-tune 60 epochs, lr=0.0001
     ]
     
     pruning_history = {
@@ -265,14 +300,16 @@ def main():
     pruning_history['tool_r2'].append(baseline_metrics['per_output']['tool_wear']['r2'])
     pruning_history['thermal_r2'].append(baseline_metrics['per_output']['thermal_displacement']['r2'])
     
-    # Iterative pruning
+    # Iterative pruning with cumulative masks
+    masks = None  # Initialize masks for first stage
+    
     for stage, (prune_ratio, epochs, lr) in enumerate(pruning_schedule, 1):
         print(f"\n{'='*60}")
         print(f"PRUNING STAGE {stage}/4")
         print(f"{'='*60}")
         
-        # Apply pruning
-        actual_ratio = apply_pruning(model, prune_ratio)
+        # Apply pruning and update masks
+        actual_ratio, masks = apply_pruning(model, prune_ratio, masks)
         
         # Count parameters
         total_params, nonzero_params = count_parameters(model)
@@ -282,8 +319,8 @@ def main():
         print(f"   Non-zero params: {nonzero_params:,}")
         print(f"   Sparsity: {sparsity*100:.1f}%")
         
-        # Fine-tune
-        best_val_loss = fine_tune(model, train_loader, val_loader, criterion, device, epochs, lr)
+        # Fine-tune while enforcing masks
+        best_val_loss = fine_tune(model, train_loader, val_loader, criterion, device, epochs, lr, masks)
         
         # Evaluate
         metrics = evaluate_model(model, X_test, y_test, output_features)
