@@ -170,32 +170,47 @@ def main():
     y_test_np = y_test.cpu().numpy()
     
     # DENORMALIZE predictions and targets for evaluation
-    # Load the full test data (normalized) with all features
+    # Get normalized features (excludes time and experiment_id)
     all_features = [f for f in metadata['feature_names'] 
                    if f not in ['time', 'experiment_id']]
     
-    # Get the full normalized test data
+    print(f"\n🔍 Debug: all_features count = {len(all_features)}")
+    print(f"🔍 Debug: output_features = {output_features}")
+    
+    # Get the full normalized test data (18 features)
     test_data_full = test_data[all_features].values
+    print(f"🔍 Debug: test_data_full shape = {test_data_full.shape}")
     
-    # Get indices of output features
+    # Get indices of output features in the normalized feature list
     output_indices = [all_features.index(f) for f in output_features]
+    print(f"🔍 Debug: output_indices = {output_indices}")
+    print(f"🔍 Debug: y_pred shape = {y_pred_np.shape}, y_test shape = {y_test_np.shape}")
     
-    # Create arrays for denormalization (copy full test data)
+    # Create arrays for denormalization (copy full test data with all 18 features)
     test_with_pred = test_data_full.copy()
     test_with_actual = test_data_full.copy()
     
-    # Replace output columns with predictions and actuals
+    # Replace ONLY the output columns with model predictions
     for i, idx in enumerate(output_indices):
         test_with_pred[:, idx] = y_pred_np[:, i]
-        # test_with_actual already has the actual normalized values
+        # test_with_actual already has the actual normalized values from CSV
     
-    # Inverse transform
+    print(f"🔍 Debug: Before denorm - pred sample: {test_with_pred[0, output_indices]}")
+    print(f"🔍 Debug: Before denorm - actual sample: {test_with_actual[0, output_indices]}")
+    
+    # Inverse transform (18 features → 18 denormalized features)
     denorm_pred_full = scaler.inverse_transform(test_with_pred)
     denorm_test_full = scaler.inverse_transform(test_with_actual)
+    
+    print(f"🔍 Debug: After denorm - pred sample: {denorm_pred_full[0, output_indices]}")
+    print(f"🔍 Debug: After denorm - actual sample: {denorm_test_full[0, output_indices]}")
     
     # Extract only the output features
     y_pred_denorm = denorm_pred_full[:, output_indices]
     y_test_denorm = denorm_test_full[:, output_indices]
+    
+    print(f"🔍 Debug: Final shapes - pred: {y_pred_denorm.shape}, actual: {y_test_denorm.shape}")
+    print(f"🔍 Debug: Sample values - pred: {y_pred_denorm[0]}, actual: {y_test_denorm[0]}\n")
 
     # Calculate overall metrics on DENORMALIZED data
     mse = np.mean((y_pred_denorm - y_test_denorm)**2)
