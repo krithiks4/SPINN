@@ -246,11 +246,12 @@ Since you don't have Jetson Xavier NX:
 - [ ] Implement physics loss functions (deferred to Phase 3b)
 
 ### Phase 3: Pruning & SPINN Development 🔄 IN PROGRESS
-- [ ] Implement magnitude-based pruning algorithm
-- [ ] Execute iterative pruning schedule (20% → 20% → 15% → 15%)
-- [ ] Fine-tune at each pruning stage
-- [ ] Monitor accuracy degradation
-- [ ] Achieve 70% parameter reduction target (666k → ~200k)
+- [x] Implement magnitude-based pruning algorithm with cumulative masking
+- [x] Fix critical bug: Masks now preserved between stages
+- [x] Add mask enforcement during fine-tuning to prevent weight resurrection
+- [x] Update pruning schedule to 30%→30%→20%→20% = 72% cumulative reduction
+- [ ] **EXECUTE TRAINING**: Run train_spinn.py to achieve 666k → ~190k params
+- [ ] Validate final SPINN achieves R² > 0.75 with 70%+ reduction
 
 ### Phase 4: Validation & Benchmarking (Week 4)
 - [ ] Run inference timing benchmarks on laptop
