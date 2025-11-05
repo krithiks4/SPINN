@@ -169,67 +169,25 @@ def main():
     y_pred_np = y_pred.cpu().numpy()
     y_test_np = y_test.cpu().numpy()
     
-    # DENORMALIZE predictions and targets for evaluation
-    # Get normalized features (excludes time and experiment_id)
-    all_features = [f for f in metadata['feature_names'] 
-                   if f not in ['time', 'experiment_id']]
-    
-    print(f"\n🔍 Debug: all_features count = {len(all_features)}")
-    print(f"🔍 Debug: output_features = {output_features}")
-    
-    # Get the full normalized test data (18 features)
-    test_data_full = test_data[all_features].values
-    print(f"🔍 Debug: test_data_full shape = {test_data_full.shape}")
-    
-    # Get indices of output features in the normalized feature list
-    output_indices = [all_features.index(f) for f in output_features]
-    print(f"🔍 Debug: output_indices = {output_indices}")
-    print(f"🔍 Debug: y_pred shape = {y_pred_np.shape}, y_test shape = {y_test_np.shape}")
-    
-    # Create arrays for denormalization (copy full test data with all 18 features)
-    test_with_pred = test_data_full.copy()
-    test_with_actual = test_data_full.copy()
-    
-    # Replace ONLY the output columns with model predictions
-    for i, idx in enumerate(output_indices):
-        test_with_pred[:, idx] = y_pred_np[:, i]
-        # test_with_actual already has the actual normalized values from CSV
-    
-    print(f"🔍 Debug: Before denorm - pred sample: {test_with_pred[0, output_indices]}")
-    print(f"🔍 Debug: Before denorm - actual sample: {test_with_actual[0, output_indices]}")
-    
-    # Inverse transform (18 features → 18 denormalized features)
-    denorm_pred_full = scaler.inverse_transform(test_with_pred)
-    denorm_test_full = scaler.inverse_transform(test_with_actual)
-    
-    print(f"🔍 Debug: After denorm - pred sample: {denorm_pred_full[0, output_indices]}")
-    print(f"🔍 Debug: After denorm - actual sample: {denorm_test_full[0, output_indices]}")
-    
-    # Extract only the output features
-    y_pred_denorm = denorm_pred_full[:, output_indices]
-    y_test_denorm = denorm_test_full[:, output_indices]
-    
-    print(f"🔍 Debug: Final shapes - pred: {y_pred_denorm.shape}, actual: {y_test_denorm.shape}")
-    print(f"🔍 Debug: Sample values - pred: {y_pred_denorm[0]}, actual: {y_test_denorm[0]}\n")
-
-    # Calculate overall metrics on DENORMALIZED data
-    mse = np.mean((y_pred_denorm - y_test_denorm)**2)
-    mae = np.mean(np.abs(y_pred_denorm - y_test_denorm))
+    # NO DENORMALIZATION NEEDED - outputs are already in original scale!
+    # Calculate overall metrics
+    mse = np.mean((y_pred_np - y_test_np)**2)
+    mae = np.mean(np.abs(y_pred_np - y_test_np))
     rmse = np.sqrt(mse)
-    r2 = 1 - (np.sum((y_test_denorm - y_pred_denorm)**2) / 
-              np.sum((y_test_denorm - y_test_denorm.mean())**2))
+    r2 = 1 - (np.sum((y_test_np - y_pred_np)**2) / 
+              np.sum((y_test_np - y_test_np.mean())**2))
 
-    print(f"\n📊 OVERALL TEST SET RESULTS (Denormalized):")
+    print(f"\n📊 OVERALL TEST SET RESULTS:")
     print(f"   MSE:  {mse:.6f}")
     print(f"   RMSE: {rmse:.6f}")
     print(f"   MAE:  {mae:.6f}")
     print(f"   R²:   {r2:.6f}")
 
-    # Per-output metrics on DENORMALIZED data
-    print(f"\n📊 PER-OUTPUT METRICS (Denormalized):")
+    # Per-output metrics
+    print(f"\n📊 PER-OUTPUT METRICS:")
     for i, name in enumerate(output_features):
-        y_true = y_test_denorm[:, i]
-        y_pred_out = y_pred_denorm[:, i]
+        y_true = y_test_np[:, i]
+        y_pred_out = y_pred_np[:, i]
         
         mse_i = np.mean((y_pred_out - y_true)**2)
         rmse_i = np.sqrt(mse_i)
@@ -251,7 +209,7 @@ def main():
         print(f"      MAPE: {mape_i:.2f}%")
         print(f"      R²:   {r2_i:.6f}")
 
-    # Save metrics (denormalized)
+    # Save metrics
     metrics = {
         'overall': {
             'mse': float(mse),
@@ -263,8 +221,8 @@ def main():
     }
     
     for i, name in enumerate(output_features):
-        y_true = y_test_denorm[:, i]
-        y_pred_out = y_pred_denorm[:, i]
+        y_true = y_test_np[:, i]
+        y_pred_out = y_pred_np[:, i]
         metrics['per_output'][name] = {
             'mse': float(np.mean((y_pred_out - y_true)**2)),
             'rmse': float(np.sqrt(np.mean((y_pred_out - y_true)**2))),
@@ -291,12 +249,12 @@ def main():
     plt.savefig('results/figures/training_history.png', dpi=300, bbox_inches='tight')
     print("\n✅ Saved: results/figures/training_history.png")
 
-    # Plot predictions (denormalized)
+    # Plot predictions
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
     for i, name in enumerate(output_features):
-        y_true = y_test_denorm[:, i]
-        y_pred_out = y_pred_denorm[:, i]
+        y_true = y_test_np[:, i]
+        y_pred_out = y_pred_np[:, i]
         
         axes[i].scatter(y_true, y_pred_out, alpha=0.5, s=10, label='Predictions')
         
@@ -316,12 +274,12 @@ def main():
     plt.savefig('results/figures/predictions.png', dpi=300, bbox_inches='tight')
     print("✅ Saved: results/figures/predictions.png")
 
-    # Plot residuals (denormalized)
+    # Plot residuals
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
     for i, name in enumerate(output_features):
-        y_true = y_test_denorm[:, i]
-        y_pred_out = y_pred_denorm[:, i]
+        y_true = y_test_np[:, i]
+        y_pred_out = y_pred_np[:, i]
         residuals = y_true - y_pred_out
         
         axes[i].scatter(y_pred_out, residuals, alpha=0.5, s=10)

@@ -384,19 +384,21 @@ class MillingDataPreprocessor:
         """Normalize features using StandardScaler"""
         print("\n📊 Normalizing data...")
         
-        # Columns to normalize (exclude time and experiment_id, but INCLUDE outputs!)
+        # Columns to normalize (ONLY INPUT FEATURES - exclude outputs, time, experiment_id)
+        output_cols = ['tool_wear', 'thermal_displacement']
         cols_to_normalize = [col for col in train_df.columns 
-                            if col not in ['time', 'experiment_id']]
+                            if col not in ['time', 'experiment_id'] + output_cols]
+        
+        print(f"   Normalizing {len(cols_to_normalize)} INPUT features only")
+        print(f"   Keeping outputs in original scale: {output_cols}")
         
         # Fit scaler on training data only
         self.scaler.fit(train_df[cols_to_normalize])
         
-        # Transform all splits
+        # Transform all splits (inputs only)
         train_df[cols_to_normalize] = self.scaler.transform(train_df[cols_to_normalize])
         val_df[cols_to_normalize] = self.scaler.transform(val_df[cols_to_normalize])
         test_df[cols_to_normalize] = self.scaler.transform(test_df[cols_to_normalize])
-        
-        print(f"   Normalized {len(cols_to_normalize)} features (including outputs)")
         
         # Save scaler
         scaler_path = self.processed_dir / "scaler.pkl"
