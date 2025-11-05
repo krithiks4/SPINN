@@ -170,27 +170,32 @@ def main():
     y_test_np = y_test.cpu().numpy()
     
     # DENORMALIZE predictions and targets for evaluation
-    # Get indices of output features in the scaler
+    # Load the full test data (normalized) with all features
     all_features = [f for f in metadata['feature_names'] 
                    if f not in ['time', 'experiment_id']]
+    
+    # Get the full normalized test data
+    test_data_full = test_data[all_features].values
+    
+    # Get indices of output features
     output_indices = [all_features.index(f) for f in output_features]
     
-    # Create dummy arrays with all features for inverse transform
-    dummy_pred = np.zeros((len(y_pred_np), len(all_features)))
-    dummy_test = np.zeros((len(y_test_np), len(all_features)))
+    # Create arrays for denormalization (copy full test data)
+    test_with_pred = test_data_full.copy()
+    test_with_actual = test_data_full.copy()
     
-    # Fill in the output columns
+    # Replace output columns with predictions and actuals
     for i, idx in enumerate(output_indices):
-        dummy_pred[:, idx] = y_pred_np[:, i]
-        dummy_test[:, idx] = y_test_np[:, i]
+        test_with_pred[:, idx] = y_pred_np[:, i]
+        # test_with_actual already has the actual normalized values
     
     # Inverse transform
-    denorm_pred = scaler.inverse_transform(dummy_pred)
-    denorm_test = scaler.inverse_transform(dummy_test)
+    denorm_pred_full = scaler.inverse_transform(test_with_pred)
+    denorm_test_full = scaler.inverse_transform(test_with_actual)
     
-    # Extract denormalized outputs
-    y_pred_denorm = denorm_pred[:, output_indices]
-    y_test_denorm = denorm_test[:, output_indices]
+    # Extract only the output features
+    y_pred_denorm = denorm_pred_full[:, output_indices]
+    y_test_denorm = denorm_test_full[:, output_indices]
 
     # Calculate overall metrics on DENORMALIZED data
     mse = np.mean((y_pred_denorm - y_test_denorm)**2)
