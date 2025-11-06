@@ -20,6 +20,14 @@ sys.path.append('models')
 from dense_pinn import DensePINN
 
 def main():
+    # Set random seeds for reproducibility
+    torch.manual_seed(42)
+    np.random.seed(42)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(42)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+    
     # Set device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"🚀 Using device: {device}\n")
@@ -73,7 +81,7 @@ def main():
     print("Initializing Dense PINN model...")
     model = DensePINN(
         input_dim=len(input_features),
-        hidden_dims=[256, 256, 256, 256],
+        hidden_dims=[512, 512, 512, 256],  # FIXED: Changed from [256,256,256,256] to match SPINN
         output_dim=len(output_features)
     ).to(device)
 
