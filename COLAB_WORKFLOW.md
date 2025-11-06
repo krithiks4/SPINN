@@ -78,10 +78,10 @@ with open('data/processed/metadata.json', 'r') as f:
 print("="*60)
 print("DATA SPLITS VERIFICATION")
 print("="*60)
-print(f"Train samples: {metadata['split_sizes']['train']}")
-print(f"Val samples:   {metadata['split_sizes']['val']}")
-print(f"Test samples:  {metadata['split_sizes']['test']}")
-print(f"Total:         {sum(metadata['split_sizes'].values())}")
+print(f"Train samples: {metadata['train_samples']}")
+print(f"Val samples:   {metadata['val_samples']}")
+print(f"Test samples:  {metadata['test_samples']}")
+print(f"Total:         {metadata['train_samples'] + metadata['val_samples'] + metadata['test_samples']}")
 
 # Load and check for data leakage
 train = pd.read_csv('data/processed/train.csv')
