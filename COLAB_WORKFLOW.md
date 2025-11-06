@@ -88,16 +88,26 @@ train = pd.read_csv('data/processed/train.csv')
 val = pd.read_csv('data/processed/val.csv')
 test = pd.read_csv('data/processed/test.csv')
 
-# Check if any indices overlap (should be zero)
-train_idx = set(train.index)
-val_idx = set(val.index)
-test_idx = set(test.index)
+# Check actual data overlap using unique identifiers
+# Use experiment_id + case_index + time as unique row identifier
+def get_unique_keys(df):
+    """Create unique keys for each row"""
+    return set(df['experiment_id'].astype(str) + '_' + 
+               df['case_index'].astype(str) + '_' + 
+               df['time'].astype(str))
 
-overlap_train_val = len(train_idx & val_idx)
-overlap_train_test = len(train_idx & test_idx)
-overlap_val_test = len(val_idx & test_idx)
+train_keys = get_unique_keys(train)
+val_keys = get_unique_keys(val)
+test_keys = get_unique_keys(test)
 
-print(f"\n🔍 Data Leakage Check:")
+overlap_train_val = len(train_keys & val_keys)
+overlap_train_test = len(train_keys & test_keys)
+overlap_val_test = len(val_keys & test_keys)
+
+print(f"\n🔍 Data Leakage Check (using experiment_id + case_index + time):")
+print(f"Train samples: {len(train_keys)}")
+print(f"Val samples:   {len(val_keys)}")
+print(f"Test samples:  {len(test_keys)}")
 print(f"Train-Val overlap:  {overlap_train_val} (should be 0)")
 print(f"Train-Test overlap: {overlap_train_test} (should be 0)")
 print(f"Val-Test overlap:   {overlap_val_test} (should be 0)")
