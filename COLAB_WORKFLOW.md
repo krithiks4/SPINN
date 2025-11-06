@@ -222,9 +222,18 @@ else:
                                capture_output=True, text=True, check=True)
         print(result.stdout)
     except subprocess.CalledProcessError as e:
-        if "nothing to commit" in e.stdout or "nothing to commit" in e.stderr:
+        # Check if it's just "nothing to commit" or an actual error
+        error_msg = e.stderr + e.stdout
+        if "nothing to commit" in error_msg:
             print("⚠️  No changes to commit - files already committed!")
+        elif "Please tell me who you are" in error_msg or "user.email" in error_msg:
+            print("⚠️  Git user not configured! Run this first:")
+            print('   !git config --global user.email "krithiks4@gmail.com"')
+            print('   !git config --global user.name "krithiks4"')
+            print("\nThen re-run this cell!")
+            raise
         else:
+            print(f"Commit error: {error_msg}")
             raise
     
     # Push
