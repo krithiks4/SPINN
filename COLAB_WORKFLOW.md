@@ -211,9 +211,14 @@ status = subprocess.run(['git', 'status', '--porcelain'],
 if not status.stdout.strip():
     print("⚠️  No changes to commit - models already pushed!")
 else:
-    # Add all checkpoint files
+    # Add all checkpoint files and related data
     print("📦 Adding files...")
-    subprocess.run(['git', 'add', 'results/checkpoints/', 'results/figures/', 'results/metrics/'], check=True)
+    subprocess.run(['git', 'add', 
+                   'results/checkpoints/', 
+                   'results/figures/', 
+                   'results/metrics/',
+                   'data/processed/',  # Include preprocessed data
+                   'models/__pycache__/'], check=True)  # Include compiled Python files
     
     # Commit
     print("💾 Committing...")
