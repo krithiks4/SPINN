@@ -57,9 +57,28 @@ X_test_cpu = X_test.cpu()
 !git config --global user.email "krithiks4@gmail.com"
 !git config --global user.name "krithiks4"
 
+# Set up GitHub authentication (IMPORTANT!)
+# Option 1: Use GitHub Personal Access Token
+# !git config --global credential.helper store
+# Then when you push, enter username and token (not password)
+# Get token from: https://github.com/settings/tokens
+
+# Option 2: For Colab, you can use this to avoid push errors:
+import os
+from google.colab import userdata
+# Store your GitHub token in Colab Secrets as 'GITHUB_TOKEN'
+# Then uncomment:
+# token = userdata.get('GITHUB_TOKEN')
+# !git remote set-url origin https://{token}@github.com/krithiks4/SPINN.git
+
+print("\n⚠️  NOTE: If git push fails in Cell 4, you can:")
+print("   1. Skip pushing (continue benchmarking)")
+print("   2. Download models and push manually from local machine")
+print("   3. Set up GitHub token authentication (see comments above)")
+
 # Check GPU
 import torch
-print(f"✅ PyTorch version: {torch.__version__}")
+print(f"\n✅ PyTorch version: {torch.__version__}")
 print(f"✅ CUDA available: {torch.cuda.is_available()}")
 if torch.cuda.is_available():
     print(f"✅ GPU: {torch.cuda.get_device_name(0)}")
@@ -179,22 +198,51 @@ print("\n✅ SPINN training complete!")
 ### Cell 4: Push Models to GitHub
 ```python
 import subprocess
+import sys
 
 print("="*60)
 print("PUSHING MODELS TO GITHUB")
 print("="*60)
 
-# Add all checkpoint files
-subprocess.run(['git', 'add', 'results/checkpoints/', 'results/figures/', 'results/metrics/'], check=True)
+# Check if there are changes to commit
+status = subprocess.run(['git', 'status', '--porcelain'], 
+                       capture_output=True, text=True)
 
-# Commit
-subprocess.run(['git', 'commit', '-m', 'Training complete: Dense PINN + SPINN models'], check=True)
+if not status.stdout.strip():
+    print("⚠️  No changes to commit - models already pushed!")
+else:
+    # Add all checkpoint files
+    print("📦 Adding files...")
+    subprocess.run(['git', 'add', 'results/checkpoints/', 'results/figures/', 'results/metrics/'], check=True)
+    
+    # Commit
+    print("💾 Committing...")
+    try:
+        result = subprocess.run(['git', 'commit', '-m', 'Training complete: Dense PINN + SPINN models'], 
+                               capture_output=True, text=True, check=True)
+        print(result.stdout)
+    except subprocess.CalledProcessError as e:
+        if "nothing to commit" in e.stdout or "nothing to commit" in e.stderr:
+            print("⚠️  No changes to commit - files already committed!")
+        else:
+            raise
+    
+    # Push
+    print("🚀 Pushing to GitHub...")
+    try:
+        result = subprocess.run(['git', 'push', 'origin', 'main'], 
+                               capture_output=True, text=True, check=True)
+        print(result.stdout)
+        print("\n✅ Models pushed to GitHub!")
+    except subprocess.CalledProcessError as e:
+        print("\n⚠️  Push failed! This is usually due to:")
+        print("   1. Authentication required (need to setup GitHub token)")
+        print("   2. Repository has newer commits (need to pull first)")
+        print("   3. Large file size (Git LFS might be needed)")
+        print(f"\nError details:\n{e.stderr}")
+        print("\n💡 WORKAROUND: Download models to local machine and push manually")
+        print("   Or continue with benchmarking - you can push later!")
 
-# Push
-subprocess.run(['git', 'push', 'origin', 'main'], check=True)
-
-print("\n✅ Models pushed to GitHub!")
-```
 
 ---
 
