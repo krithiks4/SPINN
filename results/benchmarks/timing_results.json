@@ -1,0 +1,19 @@
+{
+  "batch_inference": {
+    "dense_mean_ms": 1.0306048393249512,
+    "dense_std_ms": 1.0100079692242836,
+    "spinn_mean_ms": 0.835728645324707,
+    "spinn_std_ms": 0.21576208688987059,
+    "speedup": 1.2331811827803612,
+    "batch_size": 1000
+  },
+  "single_inference": {
+    "dense_mean_ms": 0.22832727432250977,
+    "dense_std_ms": 1.0178884444694787,
+    "spinn_mean_ms": 0.18828678131103516,
+    "spinn_std_ms": 0.02608281186056923,
+    "speedup": 1.2126569519786459,
+    "batch_size": 1
+  },
+  "device": "cuda"
+}
