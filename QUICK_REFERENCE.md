@@ -12,19 +12,28 @@
 
 | Step | Cell | Description | Time | Required? |
 |------|------|-------------|------|-----------|
-| 1 | Cells 1-2 | Setup & imports | 1 min | ✅ Yes |
-| 2 | Cell 3 | Load NASA data | 2 min | ✅ Yes |
-| 3 | Cell 4 | Dense baseline | 30 min | ⚠️ Once* |
-| 4 | **Cell 5** | **70% pruning** | **120-150 min** | ✅ **Core** |
-| 5 | Cell 6 | GPU benchmark | 5 min | ✅ Yes |
-| 6 | Cell 7 | Test evaluation | 1 min | ✅ Yes |
-| 7 | Cells 8-9 | Physics validation | 3 min | ✅ Yes |
-| 8 | Cell 10 | Online adaptation | 5 min | ✅ Yes |
-| 9 | Cell 11 | Results summary | 1 min | ✅ Yes |
+| **SETUP** |
+| 1 | Cell 1 | Clone/pull repo | 2 min | ✅ First time |
+| 2 | Cell 2 | Install deps | 5-10 min | ✅ First time |
+| 3 | Cell 3 | **Upload & preprocess data** | 10-15 min | ✅ **First time** |
+| **EXECUTION** |
+| 4 | Cell 4 | Import libraries | 1 min | ✅ Yes |
+| 5 | Cell 5 | Define models | 1 min | ✅ Yes |
+| 6 | Cell 6 | Load data | 2 min | ✅ Yes |
+| 7 | Cell 7 | Dense baseline | 30 min | ⚠️ Once* |
+| 8 | **Cell 8** | **70% pruning** | **120-150 min** | ✅ **Core** |
+| **EVALUATION** |
+| 9 | Cell 9 | GPU benchmark | 5 min | ✅ Yes |
+| 10 | Cell 10 | Test evaluation | 1 min | ✅ Yes |
+| 11 | Cell 11 | Physics functions | 1 min | ✅ Yes |
+| 12 | Cell 12 | Physics validation | 2 min | ✅ Yes |
+| 13 | Cell 13 | Online adaptation | 5 min | ✅ Yes |
+| 14 | Cell 14 | Results summary | 1 min | ✅ Yes |
 
-*Cell 4 only needed once - model saves to disk
+*Models save to disk, skip if already exists
 
----
+**Total First Run:** ~3.5 hours  
+**After Server Restart:** ~25 min (skip Cells 1-3, 7 if files exist)
 
 ## 📊 Expected Numbers
 
@@ -41,7 +50,7 @@ Online Adaptation:   14.2% resources (freeze 85% of network)
 
 ---
 
-## 🔧 Key Parameters (Cell 5)
+## 🔧 Key Parameters (Cell 8)
 
 ```python
 TARGET_SPARSITY = 0.80   # 80% target → ~70% actual
@@ -59,33 +68,44 @@ FINETUNE_EPOCHS = 20     # Per round
 ## 📁 Files Created
 
 ```
-SPINN_Manufacturing_ASME.ipynb  ← Main notebook (11 cells)
+SPINN_Manufacturing_ASME.ipynb  ← Main notebook (14 cells)
 README.md                        ← Full guide
 QUICK_REFERENCE.md              ← This file
 
+data/
+├── raw/                         ← Upload CSV here (Cell 3)
+└── processed/
+    └── nasa_milling_processed.csv  ← After Cell 3
+
 models/saved/
-├── dense_pinn.pth              ← After Cell 4
-└── spinn_structured_70pct.pth  ← After Cell 5
+├── dense_pinn.pth              ← After Cell 7
+└── spinn_structured_70pct.pth  ← After Cell 8
 ```
 
 ---
 
 ## 🐛 Common Issues
 
-### "No dataset found"
-→ Place CSV in `C:\imsa\SPINN_ASME\data\processed\`
+### "Git not found" (Cell 1)
+→ Install Git or manually download ZIP from GitHub
 
-### "CUDA out of memory"
-→ Cell 3: Change `batch_size=256` to `batch_size=128`
+### "Module 'torch' not found" (Cell 2/4)
+→ Re-run Cell 2, restart Jupyter kernel
 
-### "Cell 5 takes >3 hours"
+### "No dataset found" (Cell 3)
+→ Place NASA CSV in `C:\imsa\SPINN_ASME\data\raw\`
+
+### "Preprocessed data not found" (Cell 6)
+→ Run Cell 3 first to preprocess data
+
+### "Cell 8 takes >3 hours"
 → Normal for first run! Should be 120-150 min
 
-### "Accuracy drops to R²=0.97"
-→ Cell 5: Increase `FINETUNE_EPOCHS = 25-30`
+### "Accuracy drops to R²=0.97" (Cell 8)
+→ Increase `FINETUNE_EPOCHS = 25-30`
 
-### "Only got 60% reduction"
-→ Cell 5: Increase `TARGET_SPARSITY = 0.85`
+### "Only got 60% reduction" (Cell 8)
+→ Increase `TARGET_SPARSITY = 0.85`
 
 ---
 
@@ -116,15 +136,18 @@ Online adaptation: 14.2% resources vs full retraining
 
 ## ⏱️ Timeline
 
-**First complete run:** ~3 hours total  
-- Cell 4: 30 min (one-time)
-- Cell 5: 120-150 min (core contribution)
-- Others: 20 min
+**First complete run:** ~3.5 hours total  
+- Cells 1-3: 15-20 min (setup & data - one-time)
+- Cells 4-6: 5 min (imports & load)
+- Cell 7: 30 min (dense baseline - one-time)
+- Cell 8: 120-150 min (core contribution)
+- Cells 9-14: 20 min (evaluation)
 
-**After server restart (with saved models):**  
-- Skip Cell 4 (loads in 5 sec)
-- Re-run Cell 5 only if changing parameters
-- Otherwise: ~20 min for benchmarks
+**After server restart (with saved files):**  
+- Skip Cells 1-3 if data exists (5 sec to verify)
+- Skip Cell 7 if model exists (5 sec to load)
+- Re-run Cell 8 only if changing parameters
+- Otherwise: ~25 min for evaluation only
 
 ---
 
