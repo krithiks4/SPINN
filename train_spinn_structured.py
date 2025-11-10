@@ -140,8 +140,22 @@ def main():
     
     # Load dense baseline model
     print(f"\n📥 Loading dense baseline model...")
-    dense_model = torch.load('results/checkpoints/dense_pinn_improved_final.pt', 
-                             map_location='cpu')
+    checkpoint = torch.load('results/checkpoints/dense_pinn_improved_final.pt', 
+                           map_location='cpu')
+    
+    # Handle both state_dict and full model saves
+    if isinstance(checkpoint, dict):
+        # It's a state_dict, need to reconstruct model
+        dense_model = DensePINN(input_dim=input_dim, 
+                               hidden_dims=[512, 512, 512, 256], 
+                               output_dim=output_dim)
+        dense_model.load_state_dict(checkpoint)
+        print(f"   ✅ Loaded from state_dict")
+    else:
+        # It's a full model object
+        dense_model = checkpoint
+        print(f"   ✅ Loaded full model")
+    
     dense_params = count_parameters(dense_model)
     print(f"   Dense model: {dense_params:,} parameters")
     
