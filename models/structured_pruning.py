@@ -136,29 +136,42 @@ class StructuredPruner:
     Performs iterative neuron-level pruning with fine-tuning between rounds.
     """
     
-    def __init__(self, model: nn.Module, target_sparsity: float = 0.685):
+    def __init__(self, model: nn.Module, target_sparsity: float = None, target_keep_ratio: float = None):
         """
         Initialize structured pruner.
         
         Args:
             model: DensePINN model to prune
-            target_sparsity: Target overall sparsity (0.685 = 68.5%)
+            target_sparsity: Target overall sparsity (0.685 = 68.5% removed)
+            target_keep_ratio: Target keep ratio (0.315 = 31.5% kept) - alternative to sparsity
         """
         self.original_model = model
-        self.target_sparsity = target_sparsity
+        
+        # Accept either sparsity or keep_ratio
+        if target_keep_ratio is not None:
+            self.target_keep_ratio = target_keep_ratio
+            self.target_sparsity = 1 - target_keep_ratio
+        elif target_sparsity is not None:
+            self.target_sparsity = target_sparsity
+            self.target_keep_ratio = 1 - target_sparsity
+        else:
+            # Default: 68.5% sparsity
+            self.target_sparsity = 0.685
+            self.target_keep_ratio = 0.315
+            
         self.pruning_history = []
         
     def calculate_layer_keep_ratios(self, n_layers: int) -> List[float]:
         """
-        Calculate per-layer keep ratios to achieve target sparsity.
+        Calculate per-layer keep ratios to achieve target overall keep ratio.
         
-        For uniform sparsity across layers:
-            keep_ratio = (1 - target_sparsity)^(1/n_layers)
+        For uniform reduction across layers:
+            per_layer_keep_ratio = target_keep_ratio^(1/n_layers)
         
-        Example: For 68.5% sparsity across 4 layers:
-            keep_ratio = (1 - 0.685)^(1/4) = 0.315^0.25 ≈ 0.75
-            Each layer keeps 75% of neurons
-            Overall: 0.75^4 ≈ 0.316 = 68.4% parameter retention
+        Example: To keep 31.5% overall across 4 layers:
+            per_layer_keep_ratio = 0.315^(1/4) ≈ 0.749
+            Each layer keeps 74.9% of neurons
+            Overall: 0.749^4 ≈ 0.315 = 68.5% pruned
         
         Args:
             n_layers: Number of hidden layers to prune
@@ -166,9 +179,8 @@ class StructuredPruner:
         Returns:
             keep_ratios: List of keep ratios per layer
         """
-        # Calculate uniform keep ratio
-        retention_ratio = 1 - self.target_sparsity
-        keep_ratio = retention_ratio ** (1.0 / n_layers)
+        # Calculate uniform keep ratio per layer
+        keep_ratio = self.target_keep_ratio ** (1.0 / n_layers)
         
         # Apply same ratio to all layers (can be customized per layer if needed)
         keep_ratios = [keep_ratio] * n_layers
@@ -193,7 +205,8 @@ class StructuredPruner:
         keep_ratios = self.calculate_layer_keep_ratios(n_layers - 1)  # Don't prune output layer
         
         print(f"\n🔪 Structured Pruning Configuration:")
-        print(f"   Target sparsity: {self.target_sparsity*100:.1f}%")
+        print(f"   Target overall keep ratio: {self.target_keep_ratio*100:.1f}%")
+        print(f"   Target overall sparsity: {self.target_sparsity*100:.1f}%")
         print(f"   Per-layer keep ratio: {keep_ratios[0]*100:.1f}%")
         
         # Prune layers iteratively

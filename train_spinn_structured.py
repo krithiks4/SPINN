@@ -186,22 +186,30 @@ def main():
         'architectures': [[512, 512, 512, 256]]
     }
     
-    # Calculate per-stage sparsity
-    stage_sparsity = 1 - (1 - TARGET_SPARSITY) ** (1.0 / N_PRUNE_STAGES)
+    # Calculate per-stage keep ratio for iterative pruning
+    # After N stages, we want: remaining = (1 - TARGET_SPARSITY)
+    # Each stage: remaining_after = remaining_before * keep_ratio
+    # So: (keep_ratio)^N = (1 - TARGET_SPARSITY)
+    # Therefore: keep_ratio = (1 - TARGET_SPARSITY)^(1/N)
+    stage_keep_ratio = (1 - TARGET_SPARSITY) ** (1.0 / N_PRUNE_STAGES)
+    stage_sparsity = 1 - stage_keep_ratio
     
     print(f"\n{'='*70}")
     print(f"ITERATIVE STRUCTURED PRUNING: {N_PRUNE_STAGES} stages")
+    print(f"Target final sparsity: {TARGET_SPARSITY*100:.1f}%")
+    print(f"Per-stage keep ratio: {stage_keep_ratio*100:.1f}%")
     print(f"Per-stage sparsity: {stage_sparsity*100:.1f}%")
     print(f"{'='*70}")
     
     # Iterative pruning
     for stage in range(1, N_PRUNE_STAGES + 1):
-        print(f"\n{'='*70}")
+        print(f"{'='*70}")
         print(f"STAGE {stage}/{N_PRUNE_STAGES}: Prune + Fine-tune")
         print(f"{'='*70}")
         
-        # Prune
-        pruner = StructuredPruner(current_model, target_sparsity=stage_sparsity)
+        # Prune: Use keep_ratio directly to avoid double-compounding
+        # We want to keep stage_keep_ratio of parameters at each stage
+        pruner = StructuredPruner(current_model, target_keep_ratio=stage_keep_ratio)
         pruned_model = pruner.prune_model(current_model)
         pruned_model = pruned_model.to(device)
         
