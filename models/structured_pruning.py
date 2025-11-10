@@ -163,27 +163,25 @@ class StructuredPruner:
         
     def calculate_layer_keep_ratios(self, n_layers: int) -> List[float]:
         """
-        Calculate per-layer keep ratios to achieve target overall keep ratio.
+        Calculate per-layer keep ratios.
         
-        For uniform reduction across layers:
-            per_layer_keep_ratio = target_keep_ratio^(1/n_layers)
+        For iterative multi-stage pruning, we apply the SAME keep ratio to each layer
+        without further compounding, since the stages already handle the compounding.
         
-        Example: To keep 31.5% overall across 4 layers:
-            per_layer_keep_ratio = 0.315^(1/4) ≈ 0.749
-            Each layer keeps 74.9% of neurons
-            Overall: 0.749^4 ≈ 0.315 = 68.5% pruned
+        Example: If target_keep_ratio = 0.749 (keep 74.9% per stage):
+            Each layer should keep 74.9% of its neurons
+            This achieves 74.9% parameter retention in this stage
+            After 4 stages: 0.749^4 ≈ 0.315 (31.5% remaining, 68.5% pruned)
         
         Args:
             n_layers: Number of hidden layers to prune
             
         Returns:
-            keep_ratios: List of keep ratios per layer
+            keep_ratios: List of keep ratios per layer (all same value)
         """
-        # Calculate uniform keep ratio per layer
-        keep_ratio = self.target_keep_ratio ** (1.0 / n_layers)
-        
-        # Apply same ratio to all layers (can be customized per layer if needed)
-        keep_ratios = [keep_ratio] * n_layers
+        # Apply target_keep_ratio uniformly to each layer WITHOUT compounding
+        # The compounding happens across STAGES, not within a single stage
+        keep_ratios = [self.target_keep_ratio] * n_layers
         
         return keep_ratios
     
