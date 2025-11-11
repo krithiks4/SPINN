@@ -1,9 +1,3 @@
-"""
-SPINN Training Script - Sparse Physics-Informed Neural Network
-Implements iterative magnitude-based pruning with fine-tuning
-Target: 70% parameter reduction while maintaining R² > 0.75
-"""
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -17,19 +11,34 @@ import copy
 
 # Add models to path
 sys.path.append('models')
-from dense_pinn import DensePINN
+from models.dense_pinn import DensePINN
+from models.physics_losses import CombinedLoss
 
-class WeightedMSELoss(nn.Module):
-    """Weighted MSE loss to balance outputs with different scales"""
-    def __init__(self, weights):
-        super(WeightedMSELoss, self).__init__()
-        self.weights = weights
-    
-    def forward(self, pred, target):
-        mse_per_output = ((pred - target) ** 2).mean(dim=0)
-        weighted_mse = (mse_per_output * self.weights).sum()
-        return weighted_mse
-
+def main():
+    output_features = ['tool_wear', 'thermal_displacement']
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"🚀 Using device: {device}\n")
+    # Load data
+    print("Loading data...")
+    train_data = pd.read_csv('data/processed/train.csv')
+    val_data = pd.read_csv('data/processed/val.csv')
+    test_data = pd.read_csv('data/processed/test.csv')
+    with open('data/processed/metadata.json', 'r') as f:
+        metadata = json.load(f)
+    print(f"Train: {len(train_data)}, Val: {len(val_data)}, Test: {len(test_data)}\n")
+    # Prepare data
+    input_features = [f for f in metadata['feature_names'] if f not in ['tool_wear', 'thermal_displacement']]
+    X_train = torch.FloatTensor(train_data[input_features].values).to(device)
+    y_train = torch.FloatTensor(train_data[output_features].values).to(device)
+    X_val = torch.FloatTensor(val_data[input_features].values).to(device)
+    y_val = torch.FloatTensor(val_data[output_features].values).to(device)
+    X_test = torch.FloatTensor(test_data[input_features].values).to(device)
+    y_test = torch.FloatTensor(test_data[output_features].values).to(device)
+    from torch.utils.data import TensorDataset, DataLoader
+    train_loader = DataLoader(TensorDataset(X_train, y_train), batch_size=512, shuffle=True)
+    val_loader = DataLoader(TensorDataset(X_val, y_val), batch_size=512, shuffle=False)
+    # Physics-informed loss function
+    criterion = CombinedLoss(lambda_physics=0.1, device=device)
 def count_parameters(model):
     """Count non-zero parameters in the model"""
     total = 0
@@ -116,7 +125,7 @@ def apply_pruning(model, prune_ratio, existing_masks=None):
     
     return actual_prune_ratio, existing_masks
 
-def fine_tune(model, train_loader, val_loader, criterion, device, epochs=50, lr=0.0001, masks=None):
+def fine_tune(model, train_loader, val_loader, criterion, device, input_features, epochs=50, lr=0.0001, masks=None):
     """Fine-tune pruned model while enforcing masks"""
     print(f"\n🎯 Fine-tuning for {epochs} epochs...")
     
@@ -136,36 +145,70 @@ def fine_tune(model, train_loader, val_loader, criterion, device, epochs=50, lr=
         for X_batch, y_batch in train_loader:
             optimizer.zero_grad()
             outputs = model(X_batch)
-            loss = criterion(outputs, y_batch)
+            # Prepare dicts for physics-informed loss
+            predictions = {
+                'wear': outputs[:, 0],
+                'thermal_displacement': outputs[:, 1]
+            }
+            targets = {
+                'wear': y_batch[:, 0],
+                'thermal_displacement': y_batch[:, 1]
+            }
+            # Provide all required physics inputs from X_batch
+            inputs = {
+                'force_x': X_batch[:, input_features.index('force_x')],
+                'force_y': X_batch[:, input_features.index('force_y')],
+                'force_z': X_batch[:, input_features.index('force_z')],
+                'force_magnitude': X_batch[:, input_features.index('force_magnitude')],
+                'feed_rate': X_batch[:, input_features.index('feed_rate')],
+                'spindle_speed': X_batch[:, input_features.index('spindle_speed')],
+                'velocity': X_batch[:, input_features.index('feed_rate')],
+                'time': X_batch[:, input_features.index('time')],
+                'time_delta': torch.ones_like(X_batch[:, 0])
+            }
+            loss, _ = criterion(predictions, targets, inputs)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
-            
             # Enforce masks - zero out pruned weights after optimizer step
             if masks is not None:
                 with torch.no_grad():
                     for name, param in model.named_parameters():
                         if name in masks:
                             param.data *= masks[name]
-            
             train_loss += loss.item()
         train_loss /= len(train_loader)
-        
         # Validation
         model.eval()
         val_loss = 0
         with torch.no_grad():
             for X_batch, y_batch in val_loader:
                 outputs = model(X_batch)
-                loss = criterion(outputs, y_batch)
+                predictions = {
+                    'wear': outputs[:, 0],
+                    'thermal_displacement': outputs[:, 1]
+                }
+                targets = {
+                    'wear': y_batch[:, 0],
+                    'thermal_displacement': y_batch[:, 1]
+                }
+                inputs = {
+                    'force_x': X_batch[:, input_features.index('force_x')],
+                    'force_y': X_batch[:, input_features.index('force_y')],
+                    'force_z': X_batch[:, input_features.index('force_z')],
+                    'force_magnitude': X_batch[:, input_features.index('force_magnitude')],
+                    'feed_rate': X_batch[:, input_features.index('feed_rate')],
+                    'spindle_speed': X_batch[:, input_features.index('spindle_speed')],
+                    'velocity': X_batch[:, input_features.index('feed_rate')],
+                    'time': X_batch[:, input_features.index('time')],
+                    'time_delta': torch.ones_like(X_batch[:, 0])
+                }
+                loss, _ = criterion(predictions, targets, inputs)
                 val_loss += loss.item()
         val_loss /= len(val_loader)
-        
         scheduler.step(val_loss)
-        
         if (epoch + 1) % 10 == 0:
             print(f"   Epoch {epoch+1}/{epochs} - Train: {train_loss:.6f}, Val: {val_loss:.6f}")
-        
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             patience_counter = 0
@@ -174,7 +217,6 @@ def fine_tune(model, train_loader, val_loader, criterion, device, epochs=50, lr=
             if patience_counter >= max_patience:
                 print(f"   Early stopping at epoch {epoch+1}")
                 break
-    
     return best_val_loss
 
 def evaluate_model(model, X_test, y_test, output_features):
@@ -248,9 +290,8 @@ def main():
     train_loader = DataLoader(TensorDataset(X_train, y_train), batch_size=512, shuffle=True)
     val_loader = DataLoader(TensorDataset(X_val, y_val), batch_size=512, shuffle=False)
     
-    # Loss function with weights
-    weights = torch.tensor([1.0, 20.0]).to(device)
-    criterion = WeightedMSELoss(weights)
+    # Physics-informed loss function
+    criterion = CombinedLoss(lambda_physics=0.1, device=device)
     
     # Load pre-trained dense model
     print("Loading pre-trained Dense PINN...")
@@ -320,8 +361,8 @@ def main():
         print(f"   Sparsity: {sparsity*100:.1f}%")
         
         # Fine-tune while enforcing masks
-        best_val_loss = fine_tune(model, train_loader, val_loader, criterion, device, epochs, lr, masks)
-        
+        best_val_loss = fine_tune(model, train_loader, val_loader, criterion, device, input_features, epochs, lr, masks)
+
         # Evaluate
         metrics = evaluate_model(model, X_test, y_test, output_features)
         print(f"\n📈 Performance after stage {stage}:")

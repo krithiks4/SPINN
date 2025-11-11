@@ -1,0 +1,46 @@
+{
+  "dense_model": {
+    "r2_overall": 0.6517,
+    "r2_tool_wear": 0.4971,
+    "r2_thermal_disp": 0.9395,
+    "params": 666882
+  },
+  "spinn_model": {
+    "r2_overall": 0.9107,
+    "r2_tool_wear": 0.8717,
+    "r2_thermal_disp": 0.9684,
+    "params": 210364,
+    "compression_ratio": 0.6846
+  },
+  "pruning_stages": [
+    {
+      "stage": 1,
+      "params": 467355,
+      "r2_overall": 0.9292,
+      "r2_tool_wear": 0.8980,
+      "r2_thermal_disp": 0.9823
+    },
+    {
+      "stage": 2,
+      "params": 327686,
+      "r2_overall": 0.9162,
+      "r2_tool_wear": 0.8795,
+      "r2_thermal_disp": 0.9722
+    },
+    {
+      "stage": 3,
+      "params": 262507,
+      "r2_overall": 0.9101,
+      "r2_tool_wear": 0.8709,
+      "r2_thermal_disp": 0.9684
+    },
+    {
+      "stage": 4,
+      "params": 210364,
+      "r2_overall": 0.9107,
+      "r2_tool_wear": 0.8717,
+      "r2_thermal_disp": 0.9684
+    }
+  ],
+  "verified_date": "2025-11-10"
+}

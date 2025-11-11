@@ -1,0 +1,125 @@
+{
+  "avg_r2_baseline": -11.909942674636842,
+  "avg_r2_full_retrain": -6.724056756496429,
+  "avg_r2_online_adapt": -7.721184253692627,
+  "total_time_full": 0.05023312568664551,
+  "total_time_adapt": 0.030317068099975586,
+  "time_reduction_percent": 39.64725928246311,
+  "trainable_params_full": 67602,
+  "trainable_params_adapt": 162,
+  "param_reduction_percent": 99.76036211946392,
+  "computational_efficiency_percent": 60.35274071753689,
+  "detailed_results": {
+    "baseline": [
+      {
+        "batch_id": 1,
+        "r2_score": -46.58356475830078,
+        "loss": 0.7967647314071655,
+        "training_time": 0.0,
+        "trainable_params": 0
+      },
+      {
+        "batch_id": 2,
+        "r2_score": -2.7030298709869385,
+        "loss": 0.19491159915924072,
+        "training_time": 0.0,
+        "trainable_params": 0
+      },
+      {
+        "batch_id": 3,
+        "r2_score": -2.7143306732177734,
+        "loss": 0.11174118518829346,
+        "training_time": 0.0,
+        "trainable_params": 0
+      },
+      {
+        "batch_id": 4,
+        "r2_score": -5.232123374938965,
+        "loss": 0.870429277420044,
+        "training_time": 0.0,
+        "trainable_params": 0
+      },
+      {
+        "batch_id": 5,
+        "r2_score": -2.316664695739746,
+        "loss": 0.1334857940673828,
+        "training_time": 0.0,
+        "trainable_params": 0
+      }
+    ],
+    "full_retrain": [
+      {
+        "batch_id": 1,
+        "r2_score": -26.764389038085938,
+        "loss": 0.44994109869003296,
+        "training_time": 0.01007223129272461,
+        "trainable_params": 67602
+      },
+      {
+        "batch_id": 2,
+        "r2_score": -0.15200650691986084,
+        "loss": 0.03181236982345581,
+        "training_time": 0.010006904602050781,
+        "trainable_params": 67602
+      },
+      {
+        "batch_id": 3,
+        "r2_score": -3.679532527923584,
+        "loss": 0.20815329253673553,
+        "training_time": 0.010054349899291992,
+        "trainable_params": 67602
+      },
+      {
+        "batch_id": 4,
+        "r2_score": -0.5451517701148987,
+        "loss": 0.22466936707496643,
+        "training_time": 0.010048389434814453,
+        "trainable_params": 67602
+      },
+      {
+        "batch_id": 5,
+        "r2_score": -2.479203939437866,
+        "loss": 0.08759928494691849,
+        "training_time": 0.010051250457763672,
+        "trainable_params": 67602
+      }
+    ],
+    "online_adapt": [
+      {
+        "batch_id": 1,
+        "r2_score": -30.516685485839844,
+        "loss": 0.6593673825263977,
+        "training_time": 0.010050773620605469,
+        "trainable_params": 162
+      },
+      {
+        "batch_id": 2,
+        "r2_score": -1.554375410079956,
+        "loss": 0.0900186076760292,
+        "training_time": 0.0,
+        "trainable_params": 162
+      },
+      {
+        "batch_id": 3,
+        "r2_score": -2.234780788421631,
+        "loss": 0.14889846742153168,
+        "training_time": 0.010179519653320312,
+        "trainable_params": 162
+      },
+      {
+        "batch_id": 4,
+        "r2_score": -2.744265556335449,
+        "loss": 0.6364910006523132,
+        "training_time": 0.0,
+        "trainable_params": 162
+      },
+      {
+        "batch_id": 5,
+        "r2_score": -1.5558140277862549,
+        "loss": 0.09099392592906952,
+        "training_time": 0.010086774826049805,
+        "trainable_params": 162
+      }
+    ]
+  }
+}

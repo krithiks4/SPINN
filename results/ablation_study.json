@@ -1,0 +1,23 @@
+{
+  "base_features": {
+    "overall_r2": 0.533,
+    "tool_wear_r2": 0.335,
+    "thermal_r2": 0.720,
+    "rmse": 0.173,
+    "mae": 0.094
+  },
+  "engineered_features": {
+    "overall_r2": 0.637,
+    "tool_wear_r2": 0.474,
+    "thermal_r2": 0.961,
+    "rmse": 0.153,
+    "mae": 0.091
+  },
+  "all_features": {
+    "overall_r2": 0.775,
+    "tool_wear_r2": 0.679,
+    "thermal_r2": 0.863,
+    "rmse": 0.120,
+    "mae": 0.065
+  }
+}
