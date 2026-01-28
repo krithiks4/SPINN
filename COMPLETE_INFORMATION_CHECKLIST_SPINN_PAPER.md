@@ -35,9 +35,9 @@
 - [x] Generate overfitting visualization
 - [x] Document all fixes in checklist
 - [x] Retrain dense with stronger regularization (dropout, weight decay, early stopping)
-- [ ] Conduct ablation study (model size, feature engineering)
-- [ ] Prepare GPU benchmark scripts
-- [ ] Create comprehensive results table
+ - [x] Conduct ablation study (model size, feature engineering)
+ - [x] Prepare GPU benchmark scripts
+ - [ ] Create comprehensive results table
 
 ### 1.2 Training History
 
@@ -102,9 +102,18 @@
 ---
 
 ## 4. COMPUTATIONAL BENCHMARKS
-- GPU inference benchmarks: [pending]
-- Model size and training time logs: [pending]
-- Benchmarking and size verification code: [pending]
+- GPU inference benchmarks: [completed]
+  - Micro-benchmark (NVIDIA T4) results saved to `SPINN/results/benchmarks/verified_benchmark_results.json` and `C:/imsa/SPINN_ASME/verified_benchmark_results.json`.
+  - Summary (micro-benchmark, batch=32, 300 runs):
+    - mean_ms (batch): 0.7543924433336239 ms
+    - median_ms (batch): 0.5013425000015559 ms
+    - std_ms: 0.9803447676433852 ms
+    - p95_ms (batch): 2.6089818501304762 ms
+    - per-sample (mean): ~0.0236 ms → ~42,424 samples/sec (micro estimate)
+    - measured throughput over full val set: 313,885.6 samples/sec over 1,710 samples (total_time=0.01s)
+  - Environment metadata saved in the JSON (torch 2.8.0+cu126, CUDA 12.6, GPU: NVIDIA T4, Python 3.12)
+- Model size and training time logs: [completed]
+- Benchmarking and size verification code: [completed]
 
 ---
 
@@ -168,7 +177,7 @@
 ## 13. SUMMARY & NEXT STEPS
 - All core results (sections 1-6) are ready and verified
 - Ablation study and comprehensive results table completed
-- GPU benchmarks pending (to be run tomorrow)
+- GPU benchmarks completed and results saved to `SPINN/results/benchmarks/verified_benchmark_results.json` and `C:/imsa/SPINN_ASME/verified_benchmark_results.json`.
 - See `results/` and `diagnostic_output/` for all files
 - For publication, send ZIP or diagnostic directory as described
 
