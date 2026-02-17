@@ -1,31 +1,20 @@
-"""
-Training Flowchart Generator for Paper Revision
-Creates comprehensive flowchart and pseudocode for SPINN training
-Addresses Reviewer 1 comment about needing training flowchart
-"""
-
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
 from pathlib import Path
 
-# Set high quality
 plt.rcParams['figure.dpi'] = 300
 plt.rcParams['savefig.dpi'] = 300
 plt.rcParams['font.size'] = 10
 plt.rcParams['font.family'] = 'sans-serif'
 
 def create_training_flowchart():
-    """Create comprehensive SPINN training flowchart"""
-    
     print("📊 Creating SPINN training flowchart...")
-    
     fig, ax = plt.subplots(figsize=(14, 20))
     ax.set_xlim(0, 10)
     ax.set_ylim(0, 30)
     ax.axis('off')
-    
-    # Color scheme
+
     colors = {
         'start': '#27AE60',
         'data': '#3498DB',
@@ -35,11 +24,9 @@ def create_training_flowchart():
         'decision': '#F39C12',
         'end': '#2ECC71'
     }
-    
     y_pos = 29
     x_center = 5
-    
-    # Helper function to draw boxes
+
     def draw_box(ax, text, x, y, width, height, color, style='round'):
         box = FancyBboxPatch(
             (x - width/2, y - height/2), width, height,
@@ -51,7 +38,6 @@ def create_training_flowchart():
         ax.text(x, y, text, ha='center', va='center',
                fontsize=11, fontweight='bold', wrap=True)
         return y - height/2
-    
     def draw_arrow(ax, x1, y1, x2, y2, label='', style='->'):
         arrow = FancyArrowPatch(
             (x1, y1), (x2, y2),
@@ -63,9 +49,8 @@ def create_training_flowchart():
             mid_x, mid_y = (x1 + x2) / 2, (y1 + y2) / 2
             ax.text(mid_x + 0.3, mid_y, label, fontsize=9,
                    bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
-    
     def draw_decision(ax, text, x, y, size, color):
-        # Diamond shape
+
         diamond = mpatches.FancyBboxPatch(
             (x - size/2, y - size/2), size, size,
             boxstyle="round,pad=0.05",
@@ -73,7 +58,7 @@ def create_training_flowchart():
             linewidth=2, alpha=0.8,
             transform=ax.transData
         )
-        # Rotate to make diamond
+
         import matplotlib.transforms as transforms
         t = transforms.Affine2D().rotate_deg(45) + ax.transData
         diamond.set_transform(t)
@@ -81,177 +66,146 @@ def create_training_flowchart():
         ax.text(x, y, text, ha='center', va='center',
                fontsize=10, fontweight='bold')
         return y
-    
-    # Title
+
     ax.text(x_center, y_pos, 'SPINN Training Pipeline', 
            ha='center', fontsize=18, fontweight='bold',
            bbox=dict(boxstyle='round', facecolor='lightgray', alpha=0.8))
     y_pos -= 1.5
-    
-    # Start
+
     y_pos = draw_box(ax, 'START', x_center, y_pos, 2, 0.8, colors['start'], 'round')
     y_pos -= 0.5
     draw_arrow(ax, x_center, y_pos + 0.5, x_center, y_pos)
     y_pos -= 0.3
-    
-    # Phase 1: Data Preparation
+
     ax.text(x_center, y_pos, 'PHASE 1: DATA PREPARATION', 
            ha='center', fontsize=13, fontweight='bold',
            bbox=dict(boxstyle='round', facecolor='lightyellow'))
     y_pos -= 1
-    
     y_pos = draw_box(ax, 'Load NASA Milling\nDataset (167 experiments)', 
                     x_center, y_pos, 3, 0.8, colors['data'])
     y_pos -= 0.5
     draw_arrow(ax, x_center, y_pos + 0.5, x_center, y_pos)
     y_pos -= 0.3
-    
     y_pos = draw_box(ax, 'Feature Engineering\n16 features + physics', 
                     x_center, y_pos, 3, 0.8, colors['data'])
     y_pos -= 0.5
     draw_arrow(ax, x_center, y_pos + 0.5, x_center, y_pos)
     y_pos -= 0.3
-    
     y_pos = draw_box(ax, 'Train/Val/Test Split\n(70/15/15)', 
                     x_center, y_pos, 3, 0.8, colors['data'])
     y_pos -= 0.8
     draw_arrow(ax, x_center, y_pos + 0.5, x_center, y_pos)
     y_pos -= 0.5
-    
-    # Phase 2: Dense Model Training
+
     ax.text(x_center, y_pos, 'PHASE 2: DENSE MODEL TRAINING', 
            ha='center', fontsize=13, fontweight='bold',
            bbox=dict(boxstyle='round', facecolor='lightblue'))
     y_pos -= 1
-    
     y_pos = draw_box(ax, 'Initialize Dense PINN\n[512, 512, 512, 256]\n666,882 parameters', 
                     x_center, y_pos, 3, 1.2, colors['model'])
     y_pos -= 0.7
     draw_arrow(ax, x_center, y_pos + 0.7, x_center, y_pos)
     y_pos -= 0.3
-    
-    # Training loop box
+
     loop_top = y_pos
     y_pos = draw_box(ax, 'Epoch Loop\n(max 200 epochs)', 
                     x_center, y_pos, 3, 0.8, colors['model'])
     y_pos -= 0.5
     draw_arrow(ax, x_center, y_pos + 0.5, x_center, y_pos)
     y_pos -= 0.3
-    
     y_pos = draw_box(ax, 'Compute Combined Loss:\nL = L_data + λ₁L_Archard +\nλ₂L_thermal + λ₃L_force', 
                     x_center, y_pos, 3.5, 1.2, colors['physics'])
     y_pos -= 0.7
     draw_arrow(ax, x_center, y_pos + 0.7, x_center, y_pos)
     y_pos -= 0.3
-    
     y_pos = draw_box(ax, 'Backpropagation +\nGradient Clipping +\nOptimizer Step', 
                     x_center, y_pos, 3, 1, colors['model'])
     y_pos -= 0.6
     draw_arrow(ax, x_center, y_pos + 0.6, x_center, y_pos)
     y_pos -= 0.3
-    
-    # Convergence check
+
     y_pos = draw_box(ax, 'Converged?', x_center, y_pos, 2, 0.8, colors['decision'], 'round')
-    
-    # Loop back arrow
+
     draw_arrow(ax, x_center - 1, y_pos, x_center - 3.5, y_pos, 'No')
     draw_arrow(ax, x_center - 3.5, y_pos, x_center - 3.5, loop_top)
     draw_arrow(ax, x_center - 3.5, loop_top, x_center, loop_top)
-    
-    # Continue arrow
+
     y_pos -= 0.5
     draw_arrow(ax, x_center, y_pos + 0.5, x_center, y_pos, 'Yes')
     y_pos -= 0.5
-    
-    # Phase 3: Structured Pruning
+
     ax.text(x_center, y_pos, 'PHASE 3: STRUCTURED PRUNING', 
            ha='center', fontsize=13, fontweight='bold',
            bbox=dict(boxstyle='round', facecolor='#FFE5CC'))
     y_pos -= 1
-    
     y_pos = draw_box(ax, 'Initialize Pruning\nStage = 1', 
                     x_center, y_pos, 2.5, 0.8, colors['pruning'])
     y_pos -= 0.5
     draw_arrow(ax, x_center, y_pos + 0.5, x_center, y_pos)
-    
-    # Pruning loop
+
     prune_loop_top = y_pos
     y_pos -= 0.3
-    
     y_pos = draw_box(ax, 'Compute Neuron\nImportance Scores', 
                     x_center, y_pos, 2.5, 0.8, colors['pruning'])
     y_pos -= 0.5
     draw_arrow(ax, x_center, y_pos + 0.5, x_center, y_pos)
     y_pos -= 0.3
-    
     y_pos = draw_box(ax, 'Prune Low-Importance\nNeurons (25%)', 
                     x_center, y_pos, 2.5, 0.8, colors['pruning'])
     y_pos -= 0.5
     draw_arrow(ax, x_center, y_pos + 0.5, x_center, y_pos)
     y_pos -= 0.3
-    
     y_pos = draw_box(ax, 'Fine-tune Model\n(30 epochs)', 
                     x_center, y_pos, 2.5, 0.8, colors['model'])
     y_pos -= 0.5
     draw_arrow(ax, x_center, y_pos + 0.5, x_center, y_pos)
     y_pos -= 0.3
-    
     y_pos = draw_box(ax, 'Evaluate R²', 
                     x_center, y_pos, 2.5, 0.8, colors['model'])
     y_pos -= 0.5
     draw_arrow(ax, x_center, y_pos + 0.5, x_center, y_pos)
     y_pos -= 0.3
-    
-    # Decision: more pruning?
+
     decision_y = y_pos
     y_pos = draw_box(ax, 'Stage < 4 AND\nR² > 0.75?', 
                     x_center, y_pos, 2.5, 1, colors['decision'], 'round')
-    
-    # Loop back
+
     draw_arrow(ax, x_center - 1.25, y_pos, x_center - 3.5, y_pos, 'Yes')
     draw_arrow(ax, x_center - 3.5, y_pos, x_center - 3.5, prune_loop_top + 0.3)
     ax.text(x_center - 3.8, prune_loop_top + 0.5, 'Stage++', fontsize=9,
            bbox=dict(boxstyle='round', facecolor='white'))
     draw_arrow(ax, x_center - 3.5, prune_loop_top + 0.3, x_center, prune_loop_top + 0.3)
-    
-    # Continue
+
     y_pos -= 0.6
     draw_arrow(ax, x_center, decision_y - 0.5, x_center, y_pos, 'No')
     y_pos -= 0.3
-    
-    # Phase 4: Final Evaluation
+
     ax.text(x_center, y_pos, 'PHASE 4: EVALUATION', 
            ha='center', fontsize=13, fontweight='bold',
            bbox=dict(boxstyle='round', facecolor='lightgreen'))
     y_pos -= 1
-    
     y_pos = draw_box(ax, 'Test Set Evaluation\nCompute R², RMSE, MAE', 
                     x_center, y_pos, 3, 0.8, colors['model'])
     y_pos -= 0.5
     draw_arrow(ax, x_center, y_pos + 0.5, x_center, y_pos)
     y_pos -= 0.3
-    
     y_pos = draw_box(ax, 'Physics Validation\nVerify conservation laws', 
                     x_center, y_pos, 3, 0.8, colors['physics'])
     y_pos -= 0.5
     draw_arrow(ax, x_center, y_pos + 0.5, x_center, y_pos)
     y_pos -= 0.3
-    
     y_pos = draw_box(ax, 'Save Final Model\n+ Results', 
                     x_center, y_pos, 3, 0.8, colors['model'])
     y_pos -= 0.5
     draw_arrow(ax, x_center, y_pos + 0.5, x_center, y_pos)
     y_pos -= 0.3
-    
-    # End
+
     y_pos = draw_box(ax, 'END', x_center, y_pos, 2, 0.8, colors['end'], 'round')
-    
-    # Add legend
+
     legend_x = 8.5
     legend_y = 28
     ax.text(legend_x, legend_y, 'Legend:', fontsize=12, fontweight='bold')
     legend_y -= 0.7
-    
     legend_items = [
         ('Data Processing', colors['data']),
         ('Model Operations', colors['model']),
@@ -259,12 +213,10 @@ def create_training_flowchart():
         ('Pruning', colors['pruning']),
         ('Decision', colors['decision'])
     ]
-    
     for item, color in legend_items:
         draw_box(ax, '', legend_x, legend_y, 0.5, 0.4, color)
         ax.text(legend_x + 0.4, legend_y, item, fontsize=9, va='center')
         legend_y -= 0.6
-    
     plt.tight_layout()
     output_path = 'results/figures_publication/figure2_training_flowchart.png'
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
@@ -273,10 +225,7 @@ def create_training_flowchart():
     plt.close()
 
 def generate_pseudocode():
-    """Generate LaTeX pseudocode for SPINN training"""
-    
     print("\n📝 Generating training pseudocode...")
-    
     pseudocode = r"""
 \begin{algorithm}
 \caption{SPINN Training Algorithm}
@@ -307,13 +256,11 @@ def generate_pseudocode():
     \State $\mathcal{N}_{prune} \gets \text{bottom-}\rho \text{ neurons by } I_j$
     \State Remove neurons in $\mathcal{N}_{prune}$ from $f_\theta$ \Comment{Structured pruning}
     \State $\theta \gets$ new parameter set after pruning
-    
     \For{epoch = 1 to $E_{finetune}$}
         \For{batch $(X, Y) \in \mathcal{D}$}
             \State Fine-tune $\theta$ with combined loss $\mathcal{L}_{total}$
         \EndFor
     \EndFor
-    
     \State Evaluate $R^2$ on validation set
     \If{$R^2 < R^2_{min}$}
         \State \textbf{break} \Comment{Stop if performance degrades}
@@ -333,18 +280,6 @@ def generate_pseudocode():
 % L_thermal: Thermal expansion equation violation
 % L_force: Force balance equation violation
 % Importance score: I_j = ||w_j||_2 (L2 norm of neuron weights)
-"""
-    
-    output_path = 'results/figures_publication/pseudocode_spinn.tex'
-    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    
-    with open(output_path, 'w') as f:
-        f.write(pseudocode)
-    
-    print(f"   ✓ Saved: {output_path}")
-    
-    # Also create plain text version
-    plain_pseudocode = """
 ================================================================================
 SPINN TRAINING ALGORITHM (Plain Text)
 ================================================================================
@@ -375,7 +310,6 @@ PHASE 1: DENSE MODEL TRAINING
        2.5. Backpropagation: θ ← θ - α∇_θ L_total
        2.6. Gradient clipping: clip(∇_θ, max_norm=1.0)
      END FOR
-     
      IF converged on validation set:
        BREAK
      END IF
@@ -387,22 +321,17 @@ PHASE 2: STRUCTURED PRUNING
 3. FOR stage s = 1 to S:
      3.1. Compute neuron importance scores:
           I_j = ||w_j||₂ (L2 norm of neuron weights)
-     
      3.2. Identify neurons to prune:
           N_prune = bottom-ρ neurons by importance I_j
-     
      3.3. Remove neurons N_prune from f_θ (structured pruning)
           Update parameter set θ after removal
-     
      3.4. Fine-tuning loop:
           FOR epoch = 1 to E_finetune:
             FOR each batch (X, Y) in D:
               Fine-tune θ with combined loss L_total
             END FOR
           END FOR
-     
      3.5. Evaluate R² on validation set
-     
      3.6. IF R² < R²_min:
             BREAK (stop if performance degrades too much)
           END IF
@@ -445,27 +374,14 @@ PHYSICS LOSS DEFINITIONS:
    F_resultant = K_c · MRR
 
 ================================================================================
-"""
-    
-    output_path_txt = 'results/figures_publication/pseudocode_spinn.txt'
-    with open(output_path_txt, 'w', encoding='utf-8') as f:
-        f.write(plain_pseudocode)
-    
-    print(f"   ✓ Saved: {output_path_txt}")
-
-def main():
-    """Generate all training process documentation"""
-    
+Generate all training process documentation"""
     print("="*80)
     print("TRAINING FLOWCHART & PSEUDOCODE GENERATION")
     print("="*80)
-    
-    # Create flowchart
+
     create_training_flowchart()
-    
-    # Generate pseudocode
+
     generate_pseudocode()
-    
     print("\n" + "="*80)
     print("GENERATION COMPLETE")
     print("="*80)
@@ -478,7 +394,6 @@ def main():
     print("   • Reference: 'Figure 2 illustrates the complete SPINN training pipeline'")
     print("   • Include pseudocode in supplementary material or as Algorithm 1")
     print("   • Addresses Reviewer 1 request for training process clarification")
-    
     print("\n✅ Complete!")
 
 if __name__ == "__main__":

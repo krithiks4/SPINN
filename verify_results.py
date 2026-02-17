@@ -1,6 +1,3 @@
-# ============================================
-# CRITICAL DIAGNOSTIC SCRIPT
-# ============================================
 import torch
 import numpy as np
 from sklearn.metrics import r2_score
@@ -9,7 +6,6 @@ import json
 import matplotlib.pyplot as plt
 import pandas as pd
 
-# 1. Load both models
 print("=== Loading Models ===")
 with torch.serialization.safe_globals(["models.dense_pinn.DensePINN", "models.sparse_pinn.SPINNStructured"]):
     dense_model = torch.load('models/saved/dense_pinn.pth', weights_only=False, map_location=torch.device('cpu'))
@@ -18,10 +14,9 @@ with torch.serialization.safe_globals(["models.dense_pinn.DensePINN", "models.sp
 print(f"Dense params: {sum(p.numel() for p in dense_model.parameters())}")
 print(f"SPINN params: {sum(p.numel() for p in spinn_model.parameters())}")
 
-# 2. Load SAME test data for both
 print("\n=== Loading Test Data ===")
 df_test = pd.read_csv('data/processed/test.csv')
-# Feature scaling check
+
 input_features = [
     'time',
     'depth_of_cut',
@@ -45,7 +40,7 @@ stds = df_test[input_features].std().values
 print("Test input means:", means)
 print("Test input stds:", stds)
 y_test = torch.tensor(df_test[['tool_wear','thermal_displacement']].values, dtype=torch.float32)
-# Try normalized features for model input
+
 normalize_features = True
 if normalize_features:
     print("\n=== Using normalized features for inference ===")
@@ -57,7 +52,6 @@ y_test = torch.tensor(df_test[['tool_wear','thermal_displacement']].values, dtyp
 print(f"Test samples: {len(X_test)}")
 print(f"Test targets shape: {y_test.shape}")
 
-# 3. Evaluate both on SAME data
 import time
 try:
     from sklearn.metrics import mean_absolute_error, mean_squared_error
@@ -106,14 +100,10 @@ print(f"SPINN RMSE: {spinn_rmse:.4f}")
 print(f"SPINN Max Error: {spinn_maxerr:.4f}")
 print(f"SPINN Inference Time: {spinn_infer_time:.4f} sec")
 
-# 4. Sanity checks
 print("\n=== Sanity Checks ===")
-# assert dense_r2_overall > spinn_r2_overall, "ERROR: Pruned > Dense (impossible!)"
-# assert dense_r2_wear > 0.9, "ERROR: Dense model test R² too low"
-# assert spinn_r2_wear > 0.9, "ERROR: SPINN test R² too low"
+
 print("⚠️ Skipping R² sanity checks due to negative scores. Investigate baseline failure.")
 
-# 5. Save verified results
 results = {
     'dense_test_r2_overall': dense_r2_overall,
     'dense_test_r2_wear': dense_r2_wear,
@@ -129,7 +119,6 @@ with open('results/VERIFIED_TEST_RESULTS.json', 'w') as f:
 
 print("\n✅ Verified results saved to results/VERIFIED_TEST_RESULTS.json")
 
-# === Checking Data Splits ===
 print("\n=== Checking Data Splits ===")
 df_train = pd.read_csv('data/processed/train.csv')
 df_val = pd.read_csv('data/processed/val.csv')
@@ -175,7 +164,6 @@ assert overlap_train_val == 0, "DATA LEAKAGE: Train-Val overlap!"
 assert overlap_train_test == 0, "DATA LEAKAGE: Train-Test overlap!"
 assert overlap_val_test == 0, "DATA LEAKAGE: Val-Test overlap!"
 
-# === Checking Distributions ===
 print("\n=== Checking Distributions ===")
 print(f"Train wear range: [{y_train[:, 0].min():.3f}, {y_train[:, 0].max():.3f}]")
 print(f"Val wear range: [{y_val[:, 0].min():.3f}, {y_val[:, 0].max():.3f}]")

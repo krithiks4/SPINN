@@ -1,8 +1,3 @@
-"""
-Simple Baseline Training Script for Dense PINN
-No physics loss complications - just get results!
-"""
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -15,28 +10,24 @@ from pathlib import Path
 from tqdm import tqdm
 import sys
 
-# Add models to path
 sys.path.append('models')
 from dense_pinn import DensePINN
 
 def main():
-    # Set random seeds for reproducibility
+
     torch.manual_seed(42)
     np.random.seed(42)
     if torch.cuda.is_available():
         torch.cuda.manual_seed(42)
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
-    
-    # Set device
+
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"🚀 Using device: {device}\n")
 
-    # Create results directory
     Path('results/checkpoints').mkdir(parents=True, exist_ok=True)
     Path('results/figures').mkdir(parents=True, exist_ok=True)
 
-    # Load data
     print("Loading data...")
     train_data = pd.read_csv('data/processed/train.csv')
     val_data = pd.read_csv('data/processed/val.csv')
@@ -44,8 +35,7 @@ def main():
 
     with open('data/processed/metadata.json', 'r') as f:
         metadata = json.load(f)
-    
-    # Load scaler for denormalization
+
     with open('data/processed/scaler.pkl', 'rb') as f:
         scaler = pickle.load(f)
 
@@ -53,7 +43,6 @@ def main():
     print(f"Val: {len(val_data)} samples")
     print(f"Test: {len(test_data)} samples\n")
 
-    # Prepare datasets
     input_features = [f for f in metadata['feature_names'] 
                      if f not in ['tool_wear', 'thermal_displacement']]
     output_features = ['tool_wear', 'thermal_displacement']
@@ -61,7 +50,6 @@ def main():
     print(f"Input features ({len(input_features)})")
     print(f"Output features: {output_features}\n")
 
-    # Convert to tensors
     X_train = torch.FloatTensor(train_data[input_features].values).to(device)
     y_train = torch.FloatTensor(train_data[output_features].values).to(device)
     X_val = torch.FloatTensor(val_data[input_features].values).to(device)
@@ -69,7 +57,6 @@ def main():
     X_test = torch.FloatTensor(test_data[input_features].values).to(device)
     y_test = torch.FloatTensor(test_data[output_features].values).to(device)
 
-    # Create DataLoaders
     from torch.utils.data import TensorDataset, DataLoader
 
     train_dataset = TensorDataset(X_train, y_train)
@@ -77,32 +64,28 @@ def main():
     train_loader = DataLoader(train_dataset, batch_size=512, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=512, shuffle=False)
 
-    # Initialize model
     print("Initializing Dense PINN model...")
     model = DensePINN(
         input_dim=len(input_features),
-        hidden_dims=[512, 512, 512, 256],  # FIXED: Changed from [256,256,256,256] to match SPINN
+        hidden_dims=[512, 512, 512, 256],
         output_dim=len(output_features)
     ).to(device)
 
     total_params = sum(p.numel() for p in model.parameters())
     print(f"Total parameters: {total_params:,}\n")
 
-    # Loss and optimizer
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode='min', factor=0.5, patience=15
     )
 
-    # Training history
     history = {
         'train_loss': [],
         'val_loss': [],
         'epochs': []
     }
 
-    # Training loop
     print("="*60)
     print("TRAINING DENSE PINN (180 epochs)")
     print("="*60)
@@ -112,7 +95,7 @@ def main():
     max_patience = 30
 
     for epoch in range(180):
-        # Training
+
         model.train()
         train_loss = 0
         for X_batch, y_batch in train_loader:
@@ -124,7 +107,6 @@ def main():
             train_loss += loss.item()
         train_loss /= len(train_loader)
 
-        # Validation
         model.eval()
         val_loss = 0
         with torch.no_grad():
@@ -134,19 +116,15 @@ def main():
                 val_loss += loss.item()
         val_loss /= len(val_loader)
 
-        # Update history
         history['train_loss'].append(train_loss)
         history['val_loss'].append(val_loss)
         history['epochs'].append(epoch + 1)
 
-        # Learning rate scheduling
         scheduler.step(val_loss)
 
-        # Print progress
         if (epoch + 1) % 10 == 0 or epoch == 0:
             print(f"Epoch {epoch+1:3d}/180 - Train Loss: {train_loss:.6f} - Val Loss: {val_loss:.6f}")
 
-        # Save best model
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             torch.save(model.state_dict(), 'results/checkpoints/dense_pinn_best.pt')
@@ -154,18 +132,15 @@ def main():
         else:
             patience_counter += 1
 
-        # Early stopping
         if patience_counter >= max_patience:
             print(f"\n⚠️  Early stopping at epoch {epoch+1}")
             break
 
     print(f"\n✅ Training Complete! Best Val Loss: {best_val_loss:.6f}\n")
 
-    # Load best model for evaluation
     model.load_state_dict(torch.load('results/checkpoints/dense_pinn_best.pt'))
     torch.save(model.state_dict(), 'results/checkpoints/dense_pinn_final.pt')
 
-    # Evaluate on test set
     print("="*60)
     print("EVALUATING ON TEST SET")
     print("="*60)
@@ -176,9 +151,7 @@ def main():
 
     y_pred_np = y_pred.cpu().numpy()
     y_test_np = y_test.cpu().numpy()
-    
-    # NO DENORMALIZATION NEEDED - outputs are already in original scale!
-    # Calculate overall metrics
+
     mse = np.mean((y_pred_np - y_test_np)**2)
     mae = np.mean(np.abs(y_pred_np - y_test_np))
     rmse = np.sqrt(mse)
@@ -191,25 +164,21 @@ def main():
     print(f"   MAE:  {mae:.6f}")
     print(f"   R²:   {r2:.6f}")
 
-    # Per-output metrics
     print(f"\n📊 PER-OUTPUT METRICS:")
     for i, name in enumerate(output_features):
         y_true = y_test_np[:, i]
         y_pred_out = y_pred_np[:, i]
-        
         mse_i = np.mean((y_pred_out - y_true)**2)
         rmse_i = np.sqrt(mse_i)
         mae_i = np.mean(np.abs(y_pred_out - y_true))
         r2_i = 1 - (np.sum((y_true - y_pred_out)**2) / 
                     np.sum((y_true - y_true.mean())**2))
-        
-        # Calculate MAPE (avoiding division by zero)
-        mask = np.abs(y_true) > 1e-6  # Avoid division by near-zero
+
+        mask = np.abs(y_true) > 1e-6
         if np.sum(mask) > 0:
             mape_i = np.mean(np.abs((y_true[mask] - y_pred_out[mask]) / y_true[mask])) * 100
         else:
             mape_i = 0.0
-        
         print(f"\n   {name}:")
         print(f"      MSE:  {mse_i:.6f}")
         print(f"      RMSE: {rmse_i:.6f}")
@@ -217,7 +186,6 @@ def main():
         print(f"      MAPE: {mape_i:.2f}%")
         print(f"      R²:   {r2_i:.6f}")
 
-    # Save metrics
     metrics = {
         'overall': {
             'mse': float(mse),
@@ -227,7 +195,6 @@ def main():
         },
         'per_output': {}
     }
-    
     for i, name in enumerate(output_features):
         y_true = y_test_np[:, i]
         y_pred_out = y_pred_np[:, i]
@@ -238,11 +205,9 @@ def main():
             'r2': float(1 - (np.sum((y_true - y_pred_out)**2) / 
                              np.sum((y_true - y_true.mean())**2)))
         }
-    
     with open('results/metrics/baseline_metrics.json', 'w') as f:
         json.dump(metrics, f, indent=2)
 
-    # Plot training history
     plt.figure(figsize=(10, 6))
     plt.plot(history['epochs'], history['train_loss'], 
              label='Train Loss', linewidth=2)
@@ -257,21 +222,17 @@ def main():
     plt.savefig('results/figures/training_history.png', dpi=300, bbox_inches='tight')
     print("\n✅ Saved: results/figures/training_history.png")
 
-    # Plot predictions
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
     for i, name in enumerate(output_features):
         y_true = y_test_np[:, i]
         y_pred_out = y_pred_np[:, i]
-        
         axes[i].scatter(y_true, y_pred_out, alpha=0.5, s=10, label='Predictions')
-        
-        # Perfect prediction line
+
         min_val = min(y_true.min(), y_pred_out.min())
         max_val = max(y_true.max(), y_pred_out.max())
         axes[i].plot([min_val, max_val], [min_val, max_val], 
                      'r--', linewidth=2, label='Perfect Prediction')
-        
         axes[i].set_xlabel(f'Actual {name}', fontsize=12)
         axes[i].set_ylabel(f'Predicted {name}', fontsize=12)
         axes[i].set_title(f'{name} Predictions', fontsize=14, fontweight='bold')
@@ -282,14 +243,12 @@ def main():
     plt.savefig('results/figures/predictions.png', dpi=300, bbox_inches='tight')
     print("✅ Saved: results/figures/predictions.png")
 
-    # Plot residuals
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
     for i, name in enumerate(output_features):
         y_true = y_test_np[:, i]
         y_pred_out = y_pred_np[:, i]
         residuals = y_true - y_pred_out
-        
         axes[i].scatter(y_pred_out, residuals, alpha=0.5, s=10)
         axes[i].axhline(y=0, color='r', linestyle='--', linewidth=2)
         axes[i].set_xlabel(f'Predicted {name}', fontsize=12)
@@ -313,6 +272,6 @@ def main():
     print("="*60)
 
 if __name__ == '__main__':
-    # Create metrics directory
+
     Path('results/metrics').mkdir(parents=True, exist_ok=True)
     main()

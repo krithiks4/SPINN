@@ -1,13 +1,7 @@
-"""
-Quick verification script to understand the pruning math
-Run this to see why your first attempt only got 15% sparsity
-"""
-
 print("="*70)
 print("CUMULATIVE PRUNING MATH EXPLAINED")
 print("="*70)
 
-# Original incorrect schedule
 print("\n❌ FIRST ATTEMPT (BROKEN):")
 print("Schedule: [20%, 20%, 15%, 15%]")
 print("\nWhat SHOULD have happened:")
@@ -25,7 +19,6 @@ print("  ⚠️  Each stage recomputed threshold on remaining weights only")
 print("  ⚠️  Masks weren't preserved between stages")
 print("  ⚠️  Result: Only 15% sparsity (567k params remain)")
 
-# New corrected schedule
 print("\n" + "="*70)
 print("✅ FIXED VERSION:")
 print("Schedule: [30%, 30%, 20%, 20%]")

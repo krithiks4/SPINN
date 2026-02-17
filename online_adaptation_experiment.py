@@ -1,7 +1,3 @@
-"""
-Online Adaptation Experiment for Structured Pruned SPINN
-Reproduces notebook logic in a Python script for reproducibility and automation.
-"""
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -16,10 +12,8 @@ import sys
 sys.path.append('models')
 from dense_pinn import DensePINN
 
-# Load pruned SPINN model
 model_path = 'results/checkpoints/spinn_structured_final.pt'
 
-# Safely allow DensePINN for loading
 import torch.serialization
 with torch.serialization.safe_globals([DensePINN]):
     checkpoint = torch.load(model_path, map_location='cpu', weights_only=False)
@@ -30,7 +24,6 @@ else:
     spinn_model = checkpoint
 spinn_model.eval()
 
-# Load new data batches (simulate online scenario)
 test_df = pd.read_csv('data/processed/test.csv')
 num_batches = 5
 batch_size = len(test_df) // num_batches
@@ -41,7 +34,6 @@ for i in range(num_batches):
     y = torch.FloatTensor(batch_df[batch_df.columns[-2:]].values)
     new_data_batches.append({'batch_id': i+1, 'X': X, 'y': y})
 
-# Helper functions for freezing and fine-tuning
 def freeze_early_layers(model, freeze_fraction=0.85):
     all_params = list(model.parameters())
     num_to_freeze = int(len(all_params) * freeze_fraction)
@@ -88,7 +80,6 @@ results = {
     'online_adapt': []
 }
 
-# Scenario 1: Baseline (no adaptation)
 spinn_baseline = deepcopy(spinn_model)
 spinn_baseline.eval()
 for batch in new_data_batches:
@@ -104,7 +95,6 @@ for batch in new_data_batches:
         'trainable_params': 0
     })
 
-# Scenario 2: Full Retraining (all parameters trainable)
 spinn_full = deepcopy(spinn_model)
 for batch in new_data_batches:
     metrics = fine_tune_model(spinn_full, batch['X'], batch['y'], num_epochs=3, lr=0.0005, freeze_fraction=0.0)
@@ -116,7 +106,6 @@ for batch in new_data_batches:
         'trainable_params': metrics['trainable_params']
     })
 
-# Scenario 3: Online Adaptation (freeze 85%)
 spinn_adapt = deepcopy(spinn_model)
 for batch in new_data_batches:
     metrics = fine_tune_model(spinn_adapt, batch['X'], batch['y'], num_epochs=3, lr=0.0005, freeze_fraction=0.85)
@@ -127,8 +116,6 @@ for batch in new_data_batches:
         'training_time': metrics['training_time'],
         'trainable_params': metrics['trainable_params']
     })
-
-# Calculate metrics
 
 total_time_full = sum(r['training_time'] for r in results['full_retrain'])
 total_time_adapt = sum(r['training_time'] for r in results['online_adapt'])
